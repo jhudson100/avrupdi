@@ -1,0 +1,3 @@
+
+check:
+	@mypy $(wildcard *.py)
