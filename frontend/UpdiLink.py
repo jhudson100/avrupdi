@@ -107,7 +107,7 @@ class UpdiLink:
 
             #synchronize
             self.port.discardInput()
-            self.port.write("\n\n\n")
+            self.port.write("\n\n\nVERSION\n\n\n")
             self.waitForPrompt()
             time.sleep(0.5)
             self.port.discardInput()
