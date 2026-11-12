@@ -1,0 +1,4 @@
+frontend.o: frontend.cpp SerialPort.h
+LinuxSetBaudRate.o: LinuxSetBaudRate.cpp conf.h
+SerialPort.o: SerialPort.cpp SerialPort.h conf.h
+LinuxPort.o: LinuxPort.cpp conf.h LinuxPort.h SerialPort.h

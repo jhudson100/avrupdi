@@ -57,3 +57,5 @@ dkms.conf
 #python compiled files
 *.pyc
 
+#binary images
+*.bin
