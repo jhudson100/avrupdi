@@ -1,35 +1,38 @@
 
 #include <cstdint>
+#include "log.h"
+#include <thread>
+#include <chrono>
 
-const unsigned VERSION=0x2658;
+static const unsigned VERSION=0x2658;
 
 
-const unsigned SIZE_BYTE = 0b00;
-const unsigned SIZE_WORD = 0b01;
-const unsigned SIZE_LONG = 0b10;        //three bytes
+static const unsigned SIZE_BYTE = 0b00;
+static const unsigned SIZE_WORD = 0b01;
+static const unsigned SIZE_LONG = 0b10;        //three bytes
 
-const unsigned PTR_DEREF = 0b00;
-const unsigned PTR_DEREF_POSTINC = 0b01;
-const unsigned PTR_ITSELF = 0b10;
+static const unsigned PTR_DEREF = 0b00;
+static const unsigned PTR_DEREF_POSTINC = 0b01;
+static const unsigned PTR_ITSELF = 0b10;
 
-const unsigned KEY_SIZE_64_BITS = 0b00;
-const unsigned KEY_SIZE_128_BITS = 0b01;
+static const unsigned KEY_SIZE_64_BITS = 0b00;
+static const unsigned KEY_SIZE_128_BITS = 0b01;
 
-const unsigned SIB_OP_SEND_KEY = 0b0;
-const unsigned SIB_OP_RECV_SIB = 0b1;
+static const unsigned SIB_OP_SEND_KEY = 0b0;
+static const unsigned SIB_OP_RECV_SIB = 0b1;
 
 //write these lsb first (i.e., right to left)
-const char* KEY_CHIP_ERASE    =      "NVMErase" ;
-const char* KEY_CHIP_NVM_PROG =      "NVMProg " ;
-const char* KEY_CHIP_USERROW_WRITE = "NVMUS&te" ;
+static const char* KEY_CHIP_ERASE    =      "NVMErase" ;
+static const char* KEY_CHIP_NVM_PROG =      "NVMProg " ;
+static const char* KEY_CHIP_USERROW_WRITE = "NVMUS&te" ;
 
-const unsigned GUARD_TIME_128_CYCLES = 0x0;
-const unsigned GUARD_TIME_32_CYCLES = 0x2;
-const unsigned GUARD_TIME_16_CYCLES = 0x3;
-const unsigned GUARD_TIME_8_CYCLES = 0x4;
-const unsigned GUARD_TIME_4_CYCLES = 0x5;
-const unsigned GUARD_TIME_2_CYCLES = 0x6;
-const unsigned GUARD_TIME_OFF = 0x7;
+static const unsigned GUARD_TIME_128_CYCLES = 0x0;
+static const unsigned GUARD_TIME_32_CYCLES = 0x2;
+static const unsigned GUARD_TIME_16_CYCLES = 0x3;
+static const unsigned GUARD_TIME_8_CYCLES = 0x4;
+static const unsigned GUARD_TIME_4_CYCLES = 0x5;
+static const unsigned GUARD_TIME_2_CYCLES = 0x6;
+static const unsigned GUARD_TIME_OFF = 0x7;
 
   
 
@@ -62,76 +65,76 @@ class UpdiLink{
         }
     }
 
-    void connectToUPDI(self) -> None:
-        if this->inConnect:
-            debug("recursive call to inConnect; returning immediately")
-            return
+    bool inConnect=false;
+    void connectToUPDI() -> None:
+        if(this->inConnect)
+            return;
 
-        this->inConnect=True
-        try:
-            #if we're already connected, do nothing
-            if this->connected:
-                debug("Already connected; not trying to reconnect")
-                return
+        this->inConnect=true;
+        RAII r( [this](){ this->inConnect=false; } );
+        
+        if(this->connected){
+            debug("Already connected; not trying to reconnect");
+            return;
+        }
 
-            remoteAlreadyConnected = this->CONNECT_UPDI()
-            this->connected=True
+        bool remoteAlreadyConnected = this->CONNECT_UPDI();
+        this->connected=true;
 
-            if remoteAlreadyConnected:
-                debug("BREAK and request reset")
-                this->BREAK()
-                this->requestReset()
+        if(remoteAlreadyConnected){
+            debug("BREAK and request reset")
+            this->BREAK();
+            this->requestReset();
+        }
 
-            #synchronize
-            this->port.discardInput()
-            this->port.write("\n\n\nVERSION\n\n\n")
-            this->waitForPrompt()
-            time.sleep(0.5)
-            this->port.discardInput()
+        #synchronize
+        this->port.discardInput();
+        this->port.write("\n\n\nVERSION\n\n\n");
+        this->waitForPrompt();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)));
+        this->port.discardInput();
 
-            this->UPDISPEED(this->updiSpeed)
+        this->UPDISPEED(this->updiSpeed);
 
-            #we can enable programming even if we don't
-            #know which chip model we have yet.
-            #We can't read sig row until NVM programming has been
-            #enabled
-            this->enableNVMProgramming()
+        //we can enable programming even if we don't
+        //know which chip model we have yet.
+        //We can't read sig row until NVM programming has been
+        //enabled
+        this->enableNVMProgramming();
 
-            if this->chip == None:
-                this->chip = chips.Chip.autodetectChip(self)
+        if(!this->chip)
+            this->chip = Chip::autodetectChip(this)
 
-            if not this->chip.verifySignature(self):
-                sys.exit(1)
+        if(!this->chip.verifySignature(this))
+            std::exit(1);
 
-            #reduce guard bit time to 2 cycles
-            v = this->LDCS(0x02)
-            v &= ~0b111
-            v |= 6
-            this->STCS(addr=0x02, value=v)
+        //reduce guard bit time to 2 cycles
+        auto v = this->LDCS(0x02);
+        v &= ~0b111;
+        v |= 6;
+        this->STCS({.addr=0x02,.value=v});
 
-            #set updi clock to 16MHz
-            #8MHz is supported at all voltage/temperature ranges
-            #16MHz is supported at 0-50 degrees C at lower voltages
-            #   or at full temperature range at 4.5V
-            #32MHz is only supported at 4.5V
-            v = this->LDCS(0x09)
-            v &= ~0x03
-            v |= 1      #1=16MHz; 2=8MHz; 3=4MHz
-            this->STCS(addr=0x09, value=v)
+        //set updi clock to 16MHz
+        //8MHz is supported at all voltage/temperature ranges
+        //16MHz is supported at 0-50 degrees C at lower voltages
+        //   or at full temperature range at 4.5V
+        //32MHz is only supported at 4.5V
+        v = this->LDCS(0x09);
+        v &= ~0x03;
+        v |= 1;      //1=16MHz; 2=8MHz; 3=4MHz
+        this->STCS({.addr=0x09, .value=v});
+    }
+    
 
-            for c in this->connectCallbacks:
-                c(self)
+    void UPDISPEED(int v){
+        this->_sendCommand( std::format("UPDISPEED {}",v) );
+    }
 
-        finally:
-            this->inConnect=False
-
-    def UPDISPEED(v:int) -> None:
-        this->_sendCommand(f"UPDISPEED {v}")
-
-    def GET_VERSION(self) -> int:
-        r = this->_sendCommand("VERSION")
-        return r["version"] #type:ignore
-
+    int GET_VERSION(){
+        auto r = this->_sendCommand("VERSION");
+        return std::get<int>(r["version"]);
+    }
+    
     def CONNECT_UPDI(self) -> bool:
         debug("CONNECT_UPDI")
         this->_sendCommand(f"TIMEOUT {round(this->updiTimeout*1000)}")
@@ -214,42 +217,44 @@ class UpdiLink{
         cmd += f" {toPoll} {pollMask}"
         this->_sendCommand(cmd)
 
-    def _sendCommand( cmd: str, sendExtra:None|bytes = None, expectResponse=True) -> dict["str",Any]:
+    std::map<std::string, std::variant<int,float,std::string> > _sendCommand( std::string cmd){
+        return _sendCommand( cmd, std::vector<char>() );
+    }
 
-        st = time.time_ns()
+    std::map<std::string, std::variant<int,float,std::string> > _sendCommand( std::string cmd, const std::vector<char>& extra){
+        if( cmd == "VERSION" || cmd == "CONNECT_UPDI" || cmd.starts_width("UPDISPEED ") || cmd.starts_with("TIMEOUT ")){
+            //can issue this command even if UPDI link not established
+        } else {
+            if(! this->connected ){
+                throw std::runtime_error(std::format("UPDI connection not established for {}",cmd));
+            }
+        }
+        
+        debug(std::format("sendCommand: {}",cmd));
 
-        try:
-            if cmd.split()[0] in ["VERSION", "CONNECT_UPDI", "UPDISPEED", "TIMEOUT"]:
-                #can issue this command even if UPDI link not established
-                pass
-            else:
-                if not this->connected:
-                    raise ProtocolError(f"UPDI connection not established for {cmd}")
 
-            debug("sendCommand:",cmd)
-
-
-            this->port.write(cmd)
-            this->port.write(b"\n")
-            if sendExtra != None:
-                this->port.write(sendExtra)
-
-            if expectResponse:
-
-                #we might have some queued up data from
-                #past transactions, so discard them
-                debug("ignoreCount = ",this->ignoreCount)
-                for i in range(this->ignoreCount):
-                    data = this->waitForPrompt()
-                    print("IGNORE:",data)
-                this->ignoreCount=0
-
-                resp = this->waitForPrompt()
-                resp=resp.strip()
-                lines = resp.split("\n")
-                while lines and lines[0].startswith("DBG>"):
-                    lines.pop(0)
-                toDecode = "\n".join(lines).strip()
+        this->port.write(cmd);
+        this->port.write("\n");
+        if(!sendExtra.empty())
+            this->port.write(sendExtra);
+            
+        resp = this->waitForPrompt();
+        std::istringstream iss(resp);
+        std::string respstr;
+        while(true){
+            std::string line;
+            std::getline(iss,line);
+            if( !iss.fail()){
+                if( line.starts_with("DBG>") )
+                    std::cout << line << "\n";
+                else
+                    respstr += line
+            } else {
+                break;
+            }
+        }
+        
+        
                 try:
                     R = json.loads(toDecode)
                 except json.decoder.JSONDecodeError as e:

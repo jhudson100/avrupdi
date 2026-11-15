@@ -8,7 +8,7 @@ import struct
 import io
 from typing import Any,Callable
 from typing import NamedTuple
-from log import debug
+from log import debug,info
 import typing
 # ~ if typing.TYPE_CHECKING:
     # ~ from ATmega4808 import ATmega4808
@@ -117,5 +117,6 @@ class SerialPort:
         tmp.sort(key=lambda x: x[1])
 
         if tmp[-1][1] > 0:
+            info("Selected port",port.device)
             return port.device   #type:ignore
         return None
