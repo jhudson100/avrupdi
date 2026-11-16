@@ -1,0 +1,38 @@
+Ref: https://onlinedocs.microchip.com/oxy/GUID-CBA6F7C8-69DB-44BF-ACE3-6949CC30E98A-en-US-5/GUID-A7428434-004A-48B1-B918-3373D07A0985.html
+Ref: Datasheet, ch 11
+Ref: https://avrdudes.github.io/avr-libc/avr-libc-user-manual/mem_sections.html
+
+Fuse settings:
+    Bootsize: Gives page number (512 bytes) where boot code ends and app code begins
+    Codesize: Gives page number where app code ends and appdata section begins
+    If bootsize is zero, all of flash is boot
+    Interrupt table is at start of app code.
+    If interrupt table is at start of boot code, cpu register must be changed.
+        (default is: Table comes after boot code but before app code)
+Note: Unlike other AVR models, Dx puts bootloader *first*
+
+Default linker script order: By section: Note: No bootloader section.
+    .vectors (interrupt vectors)
+    .progmem
+    .lowtext
+    .ctors
+    .dtors
+    .init0 (execution starts here after reset)
+    .init1
+    .init2 (zeros r0 and sets sp)
+    .init3
+    .init4 (initialize data/bss)
+    .init5
+    .init6 (constructors are called)
+    .init7
+    .init8
+    .init9 (call main)
+    .text
+    .fini9... .fini0
+    .hightext
+    .progmemx
+    .jumptables
+
+Note: Can give -Wl,--section-start=sectionName=0xabcdef
+    May need to add 0x800000 to address given here
+                
