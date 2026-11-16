@@ -80,25 +80,13 @@ int serialGetc(FILE* x)
 
 }
 
+//some serial initialization is in the boot block; see bootblock.c
 
 void serialInit(){
-
-    USARTn.BAUD = (64 * F_CPU) / (16*115200);
-
-    //set transmit pin to output
-    PORTn.DIRSET = SERIAL_TRANSMIT_PIN;
-
-    //enable receiver and transmitter
-    USARTn.CTRLB |= (1<<7) | (1<<6);
-
-    //enable interrupts on receive
-    USARTn.CTRLA |= (1<<7);
-
     static FILE xstdout = FDEV_SETUP_STREAM(serialPutc, NULL, _FDEV_SETUP_WRITE);
     stdout = &xstdout;
     static FILE xstdin = FDEV_SETUP_STREAM(NULL, serialGetc, _FDEV_SETUP_READ);
     stdin = &xstdin;
-
 }
 
 ISR(USARTn_RXC_vect){

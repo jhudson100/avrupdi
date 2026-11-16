@@ -13,20 +13,21 @@ Note: Unlike other AVR models, Dx puts bootloader *first*
 
 Default linker script order: By section: Note: No bootloader section.
     .vectors (interrupt vectors)
+    .vectortext* [binutils 2.48+ only]
     .progmem
     .lowtext
     .ctors
     .dtors
     .init0 (execution starts here after reset)
     .init1
-    .init2 (zeros r0 and sets sp)
-    .init3
+    .init2 (zeros r0, sets RAMP{X,Y,Z,D}, EIND, and sp to _RAMEND)
+    .init3 (set NVMCTRLB.FLMAP and compact vector table CPU flag)
     .init4 (initialize data/bss)
-    .init5
+    .init5 [not used]
     .init6 (constructors are called)
-    .init7
-    .init8
-    .init9 (call main)
+    .init7 [not used]
+    .init8 [not used]
+    .init9 (call main, jmp exit)
     .text
     .fini9... .fini0
     .hightext
@@ -36,3 +37,7 @@ Default linker script order: By section: Note: No bootloader section.
 Note: Can give -Wl,--section-start=sectionName=0xabcdef
     May need to add 0x800000 to address given here
                 
+Could put boot block in section .init8 and then when done fall through to init9;
+    functions in init must not ret or do prologue/epilogue
+
+

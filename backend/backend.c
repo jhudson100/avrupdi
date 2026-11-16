@@ -14,7 +14,11 @@
 #include "updi.h"
 #include "report.h"
 #include "util.h"
+#include "scratchspace.h"
 
+#if SCRATCH_SPACE_SIZE < 256
+    #error
+#endif
 
 jmp_buf errorJumpBuffer;
 
@@ -96,7 +100,6 @@ void sendBlockOfDataBack( const uint8_t* block, uint16_t size ){
     outputEnd();
 }
 
-static uint8_t block[256];
 
 //Read size bytes (binary data) from stdin
 //and then use REPEAT ST to store it.
@@ -153,7 +156,10 @@ void CMD_ST_RV(){
         ST(PTR_ITSELF, SIZE_3BYTE, addr );
     }
 
-    uint8_t* B = block;
+    #if SCRATCH_SPACE_SIZE < 256
+        #error
+    #endif
+    uint8_t* B = scratchSpace;
     uint16_t ctr=size;
     while(ctr>0){
         uint8_t rv = fread(B,1,1,stdin);
@@ -164,7 +170,7 @@ void CMD_ST_RV(){
         ctr--;
     }
     DEBUG("ST_REPEAT");
-    ST_REPEAT(block,size-1);
+    ST_REPEAT(scratchSpace,size-1);
 
     if( verifyAfterWrite ){
         DEBUG("ST PTR_ITSELF AGAIN");
@@ -175,11 +181,11 @@ void CMD_ST_RV(){
         }
         DEBUG("LD_REPEAT_VERIFY");
         uint8_t badValue;
-        uint16_t idx = LD_REPEAT_VERIFY(block,size-1,&badValue);
+        uint16_t idx = LD_REPEAT_VERIFY(scratchSpace,size-1,&badValue);
         if( idx == size ){
             success0();
         } else {
-            VerificationError("Mismatch",idx,badValue,block[idx]);
+            VerificationError("Mismatch",idx,badValue,scratchSpace[idx]);
         }
     } else {
         success0();
@@ -339,8 +345,8 @@ void CMD_LD_REPEAT(){
     uint16_t size = atol(p);
     if( size == 0 || size > 256)
         ProtocolError("Bad size",size);
-    LD_REPEAT(block,size-1);
-    sendBlockOfDataBack( block, size );
+    LD_REPEAT(scratchSpace,size-1);
+    sendBlockOfDataBack( scratchSpace, size );
     //sendBlockOfDataBack already wrote success/failure
 }
 
@@ -349,9 +355,9 @@ void CMD_KEY(){
         char* p = nextToken(0);
         if(!p)
             ProtocolError("Bad key",0);
-        block[i] = (uint8_t) atol(p);
+        scratchSpace[i] = (uint8_t) atol(p);
     }
-    KEY( block );
+    KEY( scratchSpace );
     success0();
 }
 
@@ -483,13 +489,11 @@ void setConfLED(BOOL on){
 
 int main(){
 
-    wdt_disable();
+    //some initialization has been done in section .init7 (see bootblock.c)
 
-    //set CPU clock to 24MHz
-    _PROTECTED_WRITE( CLKCTRL.OSCHFCTRLA, 0x9<<2 );
 
     serialInit();
-
+    
     //use internal 1k osc
     RTC.CLKSEL = 0x01;
 
