@@ -253,63 +253,58 @@ class UpdiLink{
                 break;
             }
         }
-        
-        
-                try:
-                    R = json.loads(toDecode)
-                except json.decoder.JSONDecodeError as e:
-                    print("RESP: ->"+resp+"<-")
-                    raise
-                if not R["ok"]:
-                    raise CommandException("Error",json=str(R))
-                return R #type:ignore
-            else:
-                this->ignoreCount+=1
-                return {}
-        finally:
-            profiling.count("_sendCommand", time.time_ns()-st)
 
-    def waitForPrompt(self) -> str:
-        PROMPT="\n@@>"
-        return this->waitForString(PROMPT)[:-len(PROMPT)]
-
-    def waitForString(needle:str) -> str:
-        #debug("WAIT FOR STRING:",repr(needle))
-        try:
-            previousNewline=-1
-            haystack=[]
-            needleL = list(needle)
-            while True:
-                c = this->port.read(1).decode(errors="ignore")
-                haystack.append(c)
-                if c == '\n':
-                    tmp = haystack[previousNewline+1:]
-                    debug("RECEIVED:","".join(tmp))
-                    previousNewline = len(haystack)-1
-                if haystack[-(len(needle)):] == needleL:
-                    # ~ debug(f"WAIT FOR STRING found {needle} and returns:",haystack)
-                    return "".join(haystack)
-        except Exception as e:
-            # ~ debug(f"waitForString: waiting for {repr(needle)}:  Got exception {e}")
-            # ~ debug("Before exception: Received:",haystack)
-            raise
-
-
-
-    def setClock( speed: int) -> None:
-        allowed = {
-            4: 3, 8: 2, 16: 1, 32: 0
+        try{
+            var R = Json.parse(respstr);
+            if( !R["ok"].as_bool() ){
+                throw CommandException("Error "+respstr);
+            return R;
+        } catch( Json::error e){
+            std::cout << e.what();
+            #warning re-try the operation?
+            exit(1);
         }
-        if speed not in allowed:
-            tmp = sorted(list(allowed.keys()))
-            tmp2 = ", ".join([str(q) for q in tmp])
-            log.error("Bad UPDI clock speed; must be one of",tmp2)
+    }
+    
+    std::string waitForPrompt(){        
+        const char* PROMPT="\n@@>"
+        std::string s = this->waitForString(PROMPT);
+        return s.substr(0,s.length()-PROMPT.length());
+    }
 
-        xx = this->LDCS(addr=0x09)
+    std::string waitForString(std::string needle) {
+        int previousNewline=-1;
+        std::string haystack;
+        while(true){
+            c = this->port.read(1);
+            haystack += c;
+            if(c == '\n'){
+                std::string tmp = haystack.substr(previousNewline+1);
+                debug("RECEIVED:",tmp);
+                previousNewline = int( haystack.length()-1 );
+            }
+            if(haystack.ends_width( needle ){
+                return haystack;
+            }
+        }
+    }
 
+    void setClock( int speed ) {
+        std::map<int, int> allowed = {
+            {4,3},
+            {8,2},
+            {16,1},
+            {32,0}
+        }
+        if( !allowed.contains(speed){
+            log::error("Bad UPDI clock speed; must be one of: 4,8,16,32");
+        }
+        auto xx = this->LDCS(addr=0x09);
         xx &= 0b11111100
-        xx |= allowed[speed]
-        this->STCS(addr=0x09, value=xx)
+        xx |= allowed[speed];
+        this->STCS(addr=0x09, value=xx);
+    }
+    
 
     def requestReset(self) -> None:
         debug("requestReset")
