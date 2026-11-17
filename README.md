@@ -13,7 +13,5 @@ Usage
 
 The frontend code is located in the frontend folder.
 
-.. code::
-
-    python avrupdi.py write file.bin
+`python avrupdi.py write file.bin`
     
