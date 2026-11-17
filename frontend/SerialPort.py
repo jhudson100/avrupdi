@@ -21,10 +21,10 @@ from chips import Chip
 DEBUG=False
 
 class SerialPort:
-    def __init__(self,chip:Chip|None,timeout:float,updiSpeed:int) -> None:
+    def __init__(self,chip:Chip|None,timeout:float,updiSpeed:int, ignoreSignature:bool) -> None:
         self.portname:str|None = None
         self.port: Any|None = None
-        self.avrLink = UpdiLink(self,chip,updiSpeed)
+        self.avrLink = UpdiLink(self,chip,updiSpeed,ignoreSignature)
         self.timeout = timeout
 
     def setPortName(self,name:str) -> None:

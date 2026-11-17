@@ -2,7 +2,7 @@
 
 # pip install --user --upgrade pyserial
 
-# python3 frontend.py --gpio 12,13 --speed 200000  write test.bin
+# python3 avrupdi.py write test.bin
 
 
 import serial                       #type: ignore
@@ -18,10 +18,6 @@ from typing import NamedTuple
 from Exceptions import ProtocolError,Timeout
 import UpdiLink
 import profiling
-
-# ~ from UpdiLink.UpdiLink import UpdiLink.UpdiLink, PTR_ITSELF, SIZE_WORD
-# ~ from UpdiLink.UpdiLink import debugTimes as updiLinkDebugTimes
-# ~ from UpdiLink.UpdiLink import STS_CALLS as updiLinkSTS_CALLS
 
 from SerialPort import SerialPort
 from log import debug,error
@@ -567,6 +563,7 @@ def main() -> None:
     parser.add_argument("--no-disconnect", action="store_true",help="Don't reset the AVR and disconnect when done")
     c = ", ".join(chips.getChips())
     parser.add_argument("--chip", required=False,help=f"Chip model: One of: {c}")
+    parser.add_argument("--ignoresig", required=False,action="store_true",help="Ignore signature mismatch")
     parser.add_argument("commands",action="store",nargs="*",help="Commands to execute")
     parser.add_argument("--help-debug",action="store_true",help=f"Show information about debugging and lower-level commands")
     parser.add_argument("--updispeed",action="store",help="Set bit rate for UPDI communication."
@@ -608,7 +605,7 @@ def main() -> None:
         error("Bad value for --updispeed")
         sys.exit(1)
 
-    port = SerialPort(chip, timeout, updiSpeed)
+    port = SerialPort(chip, timeout, updiSpeed, args.ignoresig)
 
     if args.no_enable_programming:
         port.avrLink.enableProgrammingOnConnect = False

@@ -58,7 +58,7 @@ debug = log.debug
 
 class UpdiLink:
 
-    def __init__(self, port: "SerialPort",chip: chips.Chip|None, updiSpeed: int):
+    def __init__(self, port: "SerialPort",chip: chips.Chip|None, updiSpeed: int, ignoreSignature:bool):
         self.connected=False
         self.connectCallbacks:list[Callable[["UpdiLink"],None]]=[]
         self.disconnectCallbacks:list[Callable[["UpdiLink"],None]]=[]
@@ -69,6 +69,7 @@ class UpdiLink:
         self.ignoreCount=0
         self.updiTimeout=2.0
         self.updiSpeed=updiSpeed
+        self.ignoreSignature = ignoreSignature
 
     def setUpdiTimeout(self, updiTimeout: float) -> None:
         self.updiTimeout = updiTimeout
@@ -124,7 +125,11 @@ class UpdiLink:
                 self.chip = chips.Chip.autodetectChip(self)
 
             if not self.chip.verifySignature(self):
-                sys.exit(1)
+                if self.ignoreSignature:
+                    pass
+                else:
+                    print("Give the --ignoresig argument to ignore the signature mismatch")
+                    sys.exit(1)
 
             #reduce guard bit time to 2 cycles
             v = self.LDCS(0x02)
