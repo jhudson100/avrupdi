@@ -8,6 +8,7 @@
     #error
 #endif
 
+#define BOOTLOADER_VERSION_STRING "1000"
 #define USARTn SERIAL_USART
 
 #define BOOTFUNC(ret,nam)  __attribute__(used,unused,(section(".init7"))) static ret nam
@@ -108,15 +109,21 @@ BOOTFUNC(void, boot_earlyInit)(){
     boot_set_led(1);
     _delay_ms(100);
     boot_set_led(0);
+
+    boot_serial_send("BOOT>");
     
     //check to see if we need to do a flash update
-    boot_serial_getLine(scratchspace)
-    if( boot_strings_equal(scratchspace,"UPDATE") ){
-        boot_update_flash();
-        //fall through and use the new updated flash
-    } else {
-        boot_serial_send("{ \"ok\": true, \"boot\": true }\n");
-        //use the existing flash
+    while(1){
+        boot_serial_getLine(scratchspace)
+        if( boot_strings_equal(scratchspace,"UPDATE") ){
+            boot_update_flash();
+            //fall through and use the new updated flash
+        } else if( boot_strings_equal(scratchspace, "BVERSION") ){
+              boot_serial_send("{ \"ok\": true, \"bootloader_version\": " BOOTLOADER_VERSION_STRING " }\n");
+        } else {
+            boot_serial_send("{ \"ok\": true, \"boot\": true }\n");
+            break;
+        }
     }
 }
 
@@ -161,7 +168,7 @@ BOOTFUNC(void, boot_update_flash)(){
         tmp = USARTn.RXDATAL;
     }
 
-    serial_send("OK\n");
+    serial_send("UP\n");
 
     uint16_t bootend = ...read BOOTSIZE fuse to find it...
 
@@ -175,9 +182,13 @@ BOOTFUNC(void, boot_update_flash)(){
         if( pageNumber == 0x00 ){
             //we can't write to the bootloader,
             //so page 0 = done
-            boot_serial_send("CSUM\n");
+            boot_serial_send("DONE\n");
+            break;
+        } else if( pageNumber > 32768/PAGE_SIZE ){
+            boot_serial_send("BIG\n");
             break;
         }
+        
         uint8_t* p = scratchspace;
         for(uint16_t i=0;i<PAGE_SIZE;++i){
             *p = boot_serial_recv();
@@ -196,33 +207,34 @@ BOOTFUNC(void, boot_update_flash)(){
         if( expected_csum != actual_csum ){
             boot_serial_send("CSUM\n");
         else{
-            //erase page by doing spm with Z=0xffff
-            asm volatile(
-                "eor r0,r0\n"               //r0=scratch register
-                "dec r0\n"
-                "eor r1,r1\n"
-                "dec r1\n"
-                "spm\n"
-                "eor r1,r1\n"                  //r1 must be zero
-            );
+            
+            _PROTECTED_WRITE( NVMCTRL.CTRLA, 0x00 );        //nocmd
+            _PROTECTED_WRITE( NVMCTRL.CTRLA, 0x08 );        //page erase
 
-                    
-            p = scratchspace;
-            //2 bytes per word; 256 words per page
-            for(uint16_t word=0;word<512;word++,p+=2){
-                uint8_t r0,r1;
-                asm volatile(
-                    "mov r0, %[LOWER]\n"        //r0 can be clobbered
-                    "mov r1, %[UPPER]\n"
-                    "spm\n"
-                    "eor r1,r1\n"                  //r1 must be zero
-                    :
-                    : "z"(word), [LOWER] "r" (*p), [UPPER] "r"(*(p+1))
-                );
-                        
+            uint8_t* mappedAddress = (uint8_t*) 0x8000 + pageNumber * PAGE_SIZE;
+
+            *mappedAddress = 0; //trigger the erase
+
+            while( NVMCTRL.STATUS & 1 ){
+                //flash busy
             }
 
-            ...wait for it to be done... Check: Will CPU core stall automatically?
+            _PROTECTED_WRITE( NVMCTRL.CTRLA, 0x00 );        //nocmd
+            _PROTECTED_WRITE( NVMCTRL.CTRLA, 0x02 );        //flash write enable
+
+            p = scratchspace;
+            //2 bytes per word; 256 words per page
+            for(uint16_t i=0;i<512;i++,p++){
+                *mappedAddress = *p;
+                ++mappedAddress;
+                ++p;
+            }
+
+            while( NVMCTRL.STATUS & 1 ){
+                //flash busy
+            }
+
+            _PROTECTED_WRITE( NVMCTRL.CTRLA, 0x00 );        //nocmd
             
             boot_serial_send("OK\n");
         }
