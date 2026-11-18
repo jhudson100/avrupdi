@@ -134,6 +134,22 @@ BOOTFUNC(void, boot_serial_init)(){
 
 }
 
+
+#define CRC_POLY 0x11021
+
+BOOTFUNC(void,boot_crcbyte)(uint16_t* reg, uint8_t n){
+    uint8_t mask=0x80;
+    for(uint8_t i=0;i<8;++i){
+        uint16_t top = *reg & 0x8000;
+        reg <<= 1;
+        if( n & mask )
+            *reg |= 1;
+        if(top)
+            *reg ^= poly16;
+        mask>>=1;
+    }
+}
+
 BOOTFUNC(void, boot_update_flash)(){
     uint8_t tmp;
 
@@ -145,35 +161,37 @@ BOOTFUNC(void, boot_update_flash)(){
     serial_send("OK\n");
     
     //each block is 512 bytes; we have a max of 32KB = 64 blocks
-    uint8_t numBlocks = boot_serial_recv();
-    if( numBlocks == 0 ){
-        boot_panic(0x1111);
-    }
-    while(numBlocks){
+    //so we can use a byte to identify the block number
+    while(1){
+        uint8_t blockNumber = boot_serial_recv();
+        if( blockNumber == 0xff ){
+            //done!
+            break;
+        }
         uint8_t* p = scratchspace;
         for(uint16_t i=0;i<512;++i){
             *p = boot_serial_recv();
             p++;
         }
-        uint16_t expected_csum = boot_serial_recv_u32();
-        
-    
-        
-??get number of blocks
-??get each block and verify crc
-??write block
-??repeat until done
-??return
-
-    while( numBlocks > 0 ){
-        serial_send("FLRD");
-
-    uint8_t* p = buffer;
-    for(uint16_t i=0;i<512;++i){
-        *p++ = serial_recv();
+        uint16_t expected_csum = boot_serial_recv_u16();
+        uint16_t actual_csum = 0;
+        boot_crcbyte(&actual_csum,blockNumber);
+        p = scratchspace;
+        for(uint16_t i=0;i<512;++i){
+            boot_crcbyte(&actual_csum, *p);
+            p++;
+        }
+        boot_crcbyte(&actual_csum,0);
+        boot_crcbyte(&actual_csum,0);
+        if( expected_csum != actual_csum ){
+            boot_serial_send("CSUM\n");
+        else{
+            ...write block...
+            boot_serial_send("OK\n");
+        }
     }
-    
 }    
+
 
 //start of init8
 __attribute__(used,unused,naked,(section(".init8")))
