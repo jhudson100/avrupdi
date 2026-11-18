@@ -23,12 +23,8 @@ from SerialPort import SerialPort
 from log import debug,error
 
 import chips
-# ~ import ATmega4808
 import AVR16EB14
 import AVR32DD20
-import AVR32DB32
-import AVR64DB32
-import AVR128DA48
 
 EXPECTED_BACKEND_VERSION = 0x2658
 

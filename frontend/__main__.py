@@ -1,0 +1,2 @@
+import avrupdi
+avrupdi.main()

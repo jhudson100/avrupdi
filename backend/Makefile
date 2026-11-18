@@ -1,8 +1,13 @@
 MCU=avr32dd14
 CC=avr-gcc -Wall -O2 -mmcu=$(MCU)
 
+.PHONY: dist
+
 all: backend.bin
 
+dist: backend.bin
+	-/bin/cp backend.bin ..
+	
 backend.bin: backend.elf
 	avr-objcopy -O binary -R .eeprom --gap-fill 0xff backend.elf backend.bin
 

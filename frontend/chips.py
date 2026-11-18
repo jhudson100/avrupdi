@@ -88,7 +88,7 @@ class Chip:
 
 
     @staticmethod
-    def autodetectChip(avrLink: "UpdiLink") -> Chip:
+    def autodetectChip(avrLink: "UpdiLink") -> "Chip":
         alreadyRead={}
         matches=[]
         for name,addr,sig in sigs:
