@@ -11,7 +11,7 @@ Might I suggest [PicoUPDI](https://github.com/jhudson100/picoupdi)?
 Usage
 ======
 
-The frontend code is located in the frontend folder.
+Assuming you have a binary file you want to write called file.bin:
 
-`python avrupdi.py write file.bin`
+`python avrupdi.pyz write file.bin`
     
