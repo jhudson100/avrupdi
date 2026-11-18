@@ -155,7 +155,7 @@ BOOTFUNC(void, boot_update_flash)(){
             *p = boot_serial_recv();
             p++;
         }
-        uint16_t expected_csum = boot_serial_recv_u16();
+        uint16_t expected_csum = boot_serial_recv_u32();
         
     
         
