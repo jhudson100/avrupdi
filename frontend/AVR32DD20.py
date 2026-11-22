@@ -107,3 +107,7 @@ chips.registerChip("avr128da28s", 0x1100, ( 0x1e, 0x97, 0x12 ), lambda name: AVR
 chips.registerChip("avr128da32s", 0x1100, ( 0x1e, 0x97, 0x11 ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
 chips.registerChip("avr128da48s", 0x1100, ( 0x1e, 0x97, 0x10 ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
 chips.registerChip("avr128da64s", 0x1100, ( 0x1e, 0x97, 0x0f ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
+chips.registerChip("avr128db28",  0x1100, ( 0x1e, 0x97, 0x0e ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
+chips.registerChip("avr128db32",  0x1100, ( 0x1e, 0x97, 0x0d ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
+chips.registerChip("avr128db48",  0x1100, ( 0x1e, 0x97, 0x0c ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
+chips.registerChip("avr128db64",  0x1100, ( 0x1e, 0x97, 0x0b ), lambda name: AVRxxDyzz(name, FLASH_SIZE=128)  )
