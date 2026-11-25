@@ -93,7 +93,7 @@ BOOTFUNC(void, boot_set_led)(uint8_t on){
         UPDILED_PORT.OUTSET = UPDILED_PIN;
 }
 
-BOOTFUNC(void, boot_earlyInit)(){
+BOOTFUNC(void, boot_Init)(){
     wdt_disable();
 
     //set CPU clock to 24MHz
@@ -120,9 +120,11 @@ BOOTFUNC(void, boot_earlyInit)(){
             //fall through and use the new updated flash
         } else if( boot_strings_equal(scratchspace, "BVERSION") ){
               boot_serial_send("{ \"ok\": true, \"bootloader_version\": " BOOTLOADER_VERSION_STRING " }\n");
-        } else {
-            boot_serial_send("{ \"ok\": true, \"boot\": true }\n");
+        } else if( boot_strings_equal(scratchspace,"BOOT")){
+            boot_serial_send("{ \"ok\": true }\n");
             break;
+        } else {
+            boot_serial_send("{ \"ok\": false, \"msg\": \"Unknown command\"}");
         }
     }
 }
@@ -161,14 +163,15 @@ BOOTFUNC(void,boot_crcbyte)(uint16_t* reg, uint8_t n){
 BOOTFUNC(void, boot_update_flash)(){
     uint8_t tmp;
 
-    ...set brownout detector...
+    //brownout detector enabled
+    BOD.CTRLA = 1<<2;
 
     //flush the receive buffer
     while( USARTn.RXCIF ){
         tmp = USARTn.RXDATAL;
     }
 
-    serial_send("UP\n");
+    serial_send("READY\n");
 
     uint16_t bootend = ...read BOOTSIZE fuse to find it...
 

@@ -14,7 +14,7 @@
 #include "updi.h"
 #include "report.h"
 #include "util.h"
-
+#include "scratchspace.h"
 
 jmp_buf errorJumpBuffer;
 
@@ -95,8 +95,6 @@ void sendBlockOfDataBack( const uint8_t* block, uint16_t size ){
     outputListEnd();
     outputEnd();
 }
-
-static uint8_t block[256];
 
 //Read size bytes (binary data) from stdin
 //and then use REPEAT ST to store it.
